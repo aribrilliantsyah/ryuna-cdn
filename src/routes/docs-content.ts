@@ -163,13 +163,94 @@ pnpm start</code></pre>
     title: { en: 'Configuration', id: 'Konfigurasi' },
     body: {
       en: `
-<p>Two layers, merged at boot. <strong>Env wins over config file.</strong></p>
+<p>Three layers, merged at boot (later wins):</p>
+<ol>
+  <li><strong>zod defaults</strong> — built-in, always applied.</li>
+  <li><strong>JSON file</strong> at <code>config/config.{NODE_ENV}.json</code> — optional, non-secret tunables.</li>
+  <li><strong>Env vars</strong> from <code>.env</code> or shell — secrets + per-deploy overrides.</li>
+</ol>
+<p>You may omit the JSON file entirely (defaults + env are enough), or override only the keys you care about.</p>
 
-<h3>Layer 1 — <code>config/config.{NODE_ENV}.json</code> (optional, non-secret)</h3>
-<p>Pick a profile via <code>NODE_ENV</code>. Default <code>development</code>. If the file is missing, sane defaults from the zod schema apply. Start from the example:</p>
-<pre><code>cp config/config.example.json config/config.development.json</code></pre>
+<h3>Layer 2 — JSON config per environment</h3>
+<p>File picked by <code>NODE_ENV</code>:</p>
+<table>
+  <thead><tr><th><code>NODE_ENV</code></th><th>File loaded</th></tr></thead>
+  <tbody>
+    <tr><td><code>development</code> (default)</td><td><code>config/config.development.json</code></td></tr>
+    <tr><td><code>production</code></td><td><code>config/config.production.json</code></td></tr>
+    <tr><td><code>qa</code></td><td><code>config/config.qa.json</code></td></tr>
+    <tr><td><code>test</code></td><td><code>config/config.test.json</code></td></tr>
+  </tbody>
+</table>
+
+<h3>Quick setup</h3>
+<pre><code># 1. Copy the example
+cp config/config.example.json config/config.development.json
+
+# 2. Edit only what differs from defaults — chokidar watches the file and reloads on save</code></pre>
+
+<h3>Partial override (recommended)</h3>
+<p>No need to copy the whole example. Override only what matters:</p>
+<pre><code>// config/config.development.json — minimal
+{
+  "server": { "port": 9000 },
+  "caching": { "ttl": 60 }
+}</code></pre>
+<p>Everything else stays at zod default (cache enabled, disk storage, gzip on, etc).</p>
+
+<h3>Common profiles</h3>
 <details>
-<summary>Full example with all settings</summary>
+<summary>dev (local laptop)</summary>
+<pre><code>// config/config.development.json
+{
+  "server": { "host": "127.0.0.1", "port": 8080 },
+  "logging": { "level": "debug" },
+  "caching": { "ttl": 30 },
+  "cluster": false
+}</code></pre>
+</details>
+<details>
+<summary>prod (single server + PM2 cluster)</summary>
+<pre><code>// config/config.production.json
+{
+  "server": { "host": "127.0.0.1", "port": 8080, "protocol": "http" },
+  "logging": { "level": "info" },
+  "caching": {
+    "ttl": 3600,
+    "redis": { "enabled": true, "host": "127.0.0.1", "port": 6379 }
+  },
+  "headers": {
+    "useGzipCompression": true,
+    "cacheControl": { "default": "public, max-age=3600, immutable" }
+  },
+  "cluster": false
+}</code></pre>
+<p>Set <code>cluster: false</code> when running via PM2 cluster — PM2 already forks workers.</p>
+</details>
+<details>
+<summary>prod (S3 + CloudFront)</summary>
+<pre><code>// config/config.production.json (file part — non-secret)
+{
+  "images": { "directory": { "enabled": false }, "s3": { "enabled": true } },
+  "assets": { "directory": { "enabled": false }, "s3": { "enabled": true } },
+  "cloudfront": { "enabled": true }
+}
+
+# .env (secret part)
+AWS_S3_IMAGES_ACCESS_KEY=...
+AWS_S3_IMAGES_SECRET_KEY=...
+AWS_S3_IMAGES_BUCKET_NAME=my-bucket
+AWS_S3_IMAGES_REGION=ap-southeast-1
+AWS_S3_ASSETS_ACCESS_KEY=...
+AWS_S3_ASSETS_SECRET_KEY=...
+AWS_S3_ASSETS_BUCKET_NAME=my-bucket-assets
+AWS_S3_ASSETS_REGION=ap-southeast-1
+CLOUDFRONT_ACCESS_KEY=...
+CLOUDFRONT_SECRET_KEY=...
+CLOUDFRONT_DISTRIBUTION=E1ABCDEF0</code></pre>
+</details>
+<details>
+<summary>Full reference — every config key with default value</summary>
 <pre><code>{
   "server": {
     "host": "0.0.0.0",
@@ -212,7 +293,27 @@ pnpm start</code></pre>
 }</code></pre>
 </details>
 
-<h3>Layer 2 — <code>.env</code> (secrets + per-deploy)</h3>
+<h3>Per-domain config (multi-tenant)</h3>
+<p>Enable <code>multiDomain.enabled: true</code> in the main config, then create per-host overrides:</p>
+<pre><code>domains/
+└── cdn.example.com/
+    ├── config/
+    │   └── config.production.json   # only keys to override for this host
+    └── workspace/
+        ├── recipes/
+        ├── routes/
+        └── plugins/</code></pre>
+<p>The domain manager scans <code>domains/</code> at boot. Each per-host JSON layers on top of the main config (only fields marked <em>allowDomainOverride</em> in the schema can be overridden).</p>
+
+<h3>Boot order</h3>
+<pre><code>1. read zod defaults
+2. read config/config.{NODE_ENV}.json if exists, deep-merge
+3. read .env (or shell env), overlay top-level keys
+4. zod validates → typed AppConfig
+5. boot Fastify with merged result
+6. chokidar watches the JSON file → repeat 2-4 on change</code></pre>
+
+<h3>Layer 3 — <code>.env</code> (secrets + per-deploy)</h3>
 <pre><code>cp .env.example .env
 # edit values</code></pre>
 <table>
@@ -237,13 +338,94 @@ pnpm start</code></pre>
 <p><strong>Rule of thumb:</strong> anything that's a secret → env. Anything that's a non-secret runtime tunable (TTL, header rules, image limits, cron) → config file. Env always overrides config.</p>
 `,
       id: `
-<p>Dua layer, di-merge saat boot. <strong>Env menang dari file config.</strong></p>
+<p>Tiga layer, di-merge saat boot (yang belakang menang):</p>
+<ol>
+  <li><strong>zod default</strong> — built-in, selalu di-apply.</li>
+  <li><strong>File JSON</strong> di <code>config/config.{NODE_ENV}.json</code> — opsional, non-secret tunable.</li>
+  <li><strong>Env var</strong> dari <code>.env</code> atau shell — secret + override per-deploy.</li>
+</ol>
+<p>File JSON boleh tidak ada sama sekali (default + env cukup), atau override field yang kamu mau saja.</p>
 
-<h3>Layer 1 — <code>config/config.{NODE_ENV}.json</code> (opsional, non-secret)</h3>
-<p>Pilih profile via <code>NODE_ENV</code>. Default <code>development</code>. Kalau file tidak ada, default dari zod schema dipakai. Mulai dari contoh:</p>
-<pre><code>cp config/config.example.json config/config.development.json</code></pre>
+<h3>Layer 2 — JSON config per environment</h3>
+<p>File dipilih berdasarkan <code>NODE_ENV</code>:</p>
+<table>
+  <thead><tr><th><code>NODE_ENV</code></th><th>File yang dibaca</th></tr></thead>
+  <tbody>
+    <tr><td><code>development</code> (default)</td><td><code>config/config.development.json</code></td></tr>
+    <tr><td><code>production</code></td><td><code>config/config.production.json</code></td></tr>
+    <tr><td><code>qa</code></td><td><code>config/config.qa.json</code></td></tr>
+    <tr><td><code>test</code></td><td><code>config/config.test.json</code></td></tr>
+  </tbody>
+</table>
+
+<h3>Setup cepat</h3>
+<pre><code># 1. Copy contoh
+cp config/config.example.json config/config.development.json
+
+# 2. Edit field yang berbeda dari default — chokidar watch file dan reload otomatis saat save</code></pre>
+
+<h3>Partial override (recommended)</h3>
+<p>Tidak perlu copy seluruh contoh. Override yang penting saja:</p>
+<pre><code>// config/config.development.json — minimal
+{
+  "server": { "port": 9000 },
+  "caching": { "ttl": 60 }
+}</code></pre>
+<p>Sisa pakai default zod (cache nyala, disk storage, gzip nyala, dll).</p>
+
+<h3>Profil umum</h3>
 <details>
-<summary>Contoh lengkap semua setting</summary>
+<summary>dev (laptop lokal)</summary>
+<pre><code>// config/config.development.json
+{
+  "server": { "host": "127.0.0.1", "port": 8080 },
+  "logging": { "level": "debug" },
+  "caching": { "ttl": 30 },
+  "cluster": false
+}</code></pre>
+</details>
+<details>
+<summary>prod (server tunggal + PM2 cluster)</summary>
+<pre><code>// config/config.production.json
+{
+  "server": { "host": "127.0.0.1", "port": 8080, "protocol": "http" },
+  "logging": { "level": "info" },
+  "caching": {
+    "ttl": 3600,
+    "redis": { "enabled": true, "host": "127.0.0.1", "port": 6379 }
+  },
+  "headers": {
+    "useGzipCompression": true,
+    "cacheControl": { "default": "public, max-age=3600, immutable" }
+  },
+  "cluster": false
+}</code></pre>
+<p>Set <code>cluster: false</code> saat run via PM2 cluster — PM2 sudah fork worker.</p>
+</details>
+<details>
+<summary>prod (S3 + CloudFront)</summary>
+<pre><code>// config/config.production.json (bagian file — non-secret)
+{
+  "images": { "directory": { "enabled": false }, "s3": { "enabled": true } },
+  "assets": { "directory": { "enabled": false }, "s3": { "enabled": true } },
+  "cloudfront": { "enabled": true }
+}
+
+# .env (bagian secret)
+AWS_S3_IMAGES_ACCESS_KEY=...
+AWS_S3_IMAGES_SECRET_KEY=...
+AWS_S3_IMAGES_BUCKET_NAME=my-bucket
+AWS_S3_IMAGES_REGION=ap-southeast-1
+AWS_S3_ASSETS_ACCESS_KEY=...
+AWS_S3_ASSETS_SECRET_KEY=...
+AWS_S3_ASSETS_BUCKET_NAME=my-bucket-assets
+AWS_S3_ASSETS_REGION=ap-southeast-1
+CLOUDFRONT_ACCESS_KEY=...
+CLOUDFRONT_SECRET_KEY=...
+CLOUDFRONT_DISTRIBUTION=E1ABCDEF0</code></pre>
+</details>
+<details>
+<summary>Referensi lengkap — semua key config beserta default</summary>
 <pre><code>{
   "server": {
     "host": "0.0.0.0",
@@ -286,7 +468,27 @@ pnpm start</code></pre>
 }</code></pre>
 </details>
 
-<h3>Layer 2 — <code>.env</code> (secret + per-deploy)</h3>
+<h3>Per-domain config (multi-tenant)</h3>
+<p>Aktifkan <code>multiDomain.enabled: true</code> di config utama, lalu buat override per-host:</p>
+<pre><code>domains/
+└── cdn.example.com/
+    ├── config/
+    │   └── config.production.json   # cuma key yang mau di-override per host
+    └── workspace/
+        ├── recipes/
+        ├── routes/
+        └── plugins/</code></pre>
+<p>Domain manager scan folder <code>domains/</code> saat boot. JSON per-host di-layer di atas config utama (hanya field yang ditandai <em>allowDomainOverride</em> di schema yang bisa di-override).</p>
+
+<h3>Urutan boot</h3>
+<pre><code>1. baca default zod
+2. baca config/config.{NODE_ENV}.json kalau ada, deep-merge
+3. baca .env (atau shell env), overlay key top-level
+4. zod validasi → typed AppConfig
+5. boot Fastify dengan hasil merged
+6. chokidar watch file JSON → ulang 2-4 saat ada perubahan</code></pre>
+
+<h3>Layer 3 — <code>.env</code> (secret + per-deploy)</h3>
 <pre><code>cp .env.example .env
 # edit isinya</code></pre>
 <table>
