@@ -1,0 +1,34 @@
+# Build
+dist/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Config (per-env, may contain secrets)
+config/config.development.json
+config/config.production.json
+config/config.qa.json
+config/config.test.json
+
+# Runtime dirs (auto-created)
+cache/
+storage/
+workspace/
+domains/
+log/
+vendor/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Test coverage
+coverage/
+
+# OS / editor
+.DS_Store
+.vscode/settings.json
+.idea/
