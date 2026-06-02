@@ -1,5 +1,5 @@
 # Build
-dist/
+/dist/
 *.tsbuildinfo
 
 # Env
@@ -8,25 +8,25 @@ dist/
 .env.*.local
 
 # Config (per-env, may contain secrets)
-config/config.development.json
-config/config.production.json
-config/config.qa.json
-config/config.test.json
+/config/config.development.json
+/config/config.production.json
+/config/config.qa.json
+/config/config.test.json
 
-# Runtime dirs (auto-created)
-cache/
-storage/
-workspace/
-domains/
-log/
-vendor/
+# Runtime dirs (auto-created — root-anchored so src/cache, src/storage, src/workspace are NOT ignored)
+/cache/
+/storage/
+/workspace/
+/domains/
+/log/
+/vendor/
 
 # Node
 node_modules/
 npm-debug.log
 
 # Test coverage
-coverage/
+/coverage/
 
 # OS / editor
 .DS_Store
