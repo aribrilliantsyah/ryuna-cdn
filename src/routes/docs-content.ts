@@ -1069,6 +1069,112 @@ POST /api/routes    body: <route JSON></code></pre>`
     }
   },
   {
+    id: 'api-collections',
+    title: { en: 'API collections', id: 'Koleksi API' },
+    body: {
+      en: `
+<p>Ready-to-use collections for the three main API clients. Each contains the same folder structure:</p>
+<ul>
+  <li><strong>Public</strong> — no auth required (welcome, docs, transforms, upload, delete, PDF)</li>
+  <li><strong>Auth</strong> — get a bearer token from <code>/token</code> (auto-captured into <code>{{accessToken}}</code>)</li>
+  <li><strong>Authenticated</strong> — bearer-protected admin endpoints (<code>/api/flush</code>, <code>/api/recipes</code>, <code>/api/routes</code>, <code>/api/status</code>)</li>
+  <li><strong>Multi-domain admin</strong> — <code>/_ryunacdn/domains</code> endpoints (open when <code>multiDomain.configurationApi=true</code>)</li>
+</ul>
+
+<h3>Download</h3>
+<table>
+  <thead><tr><th>Client</th><th>File</th><th>Import</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Postman</strong></td>
+      <td><a href="/collections/postman">RyunaCDN.postman_collection.json</a></td>
+      <td>File → Import → drop the JSON file</td>
+    </tr>
+    <tr>
+      <td><strong>Insomnia</strong></td>
+      <td><a href="/collections/insomnia">RyunaCDN.insomnia.json</a></td>
+      <td>Application → Preferences → Data → Import Data → From File</td>
+    </tr>
+    <tr>
+      <td><strong>Bruno</strong></td>
+      <td><a href="/collections/bruno">RyunaCDN.bruno.zip</a></td>
+      <td>Unzip → Bruno → Open Collection → pick the <code>RyunaCDN/</code> folder</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Variables</h3>
+<p>All three ship with these variables — set them before calling protected endpoints:</p>
+<table>
+  <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>baseUrl</code></td><td><code>http://localhost:8080</code></td><td>API base URL</td></tr>
+    <tr><td><code>clientId</code></td><td>(empty)</td><td>Set to your <code>AUTH_CLIENT_ID</code></td></tr>
+    <tr><td><code>secret</code></td><td>(empty)</td><td>Set to your <code>AUTH_SECRET</code></td></tr>
+    <tr><td><code>accessToken</code></td><td>(empty)</td><td>Auto-populated by "Get bearer token" request</td></tr>
+  </tbody>
+</table>
+
+<h3>Workflow</h3>
+<ol>
+  <li>Set <code>baseUrl</code>, <code>clientId</code>, <code>secret</code>.</li>
+  <li>Run <strong>Auth → Get bearer token</strong>. The response's <code>accessToken</code> is captured automatically.</li>
+  <li>Run any request in <strong>Authenticated</strong> folder — bearer is auto-attached.</li>
+  <li>For <strong>Multi-domain admin</strong>, enable <code>multiDomain.enabled=true</code> + <code>multiDomain.configurationApi=true</code> on the server first.</li>
+</ol>`,
+      id: `
+<p>Koleksi siap pakai untuk 3 API client utama. Struktur folder semua sama:</p>
+<ul>
+  <li><strong>Public</strong> — tanpa auth (welcome, docs, transform, upload, delete, PDF)</li>
+  <li><strong>Auth</strong> — ambil bearer token dari <code>/token</code> (auto-capture ke <code>{{accessToken}}</code>)</li>
+  <li><strong>Authenticated</strong> — endpoint admin yang protected bearer (<code>/api/flush</code>, <code>/api/recipes</code>, <code>/api/routes</code>, <code>/api/status</code>)</li>
+  <li><strong>Multi-domain admin</strong> — endpoint <code>/_ryunacdn/domains</code> (terbuka kalau <code>multiDomain.configurationApi=true</code>)</li>
+</ul>
+
+<h3>Download</h3>
+<table>
+  <thead><tr><th>Client</th><th>File</th><th>Cara import</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Postman</strong></td>
+      <td><a href="/collections/postman">RyunaCDN.postman_collection.json</a></td>
+      <td>File → Import → drop file JSON</td>
+    </tr>
+    <tr>
+      <td><strong>Insomnia</strong></td>
+      <td><a href="/collections/insomnia">RyunaCDN.insomnia.json</a></td>
+      <td>Application → Preferences → Data → Import Data → From File</td>
+    </tr>
+    <tr>
+      <td><strong>Bruno</strong></td>
+      <td><a href="/collections/bruno">RyunaCDN.bruno.zip</a></td>
+      <td>Unzip → Bruno → Open Collection → pilih folder <code>RyunaCDN/</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Variable</h3>
+<p>Semua ship dengan variable berikut — set dulu sebelum panggil endpoint yang protected:</p>
+<table>
+  <thead><tr><th>Variable</th><th>Default</th><th>Fungsi</th></tr></thead>
+  <tbody>
+    <tr><td><code>baseUrl</code></td><td><code>http://localhost:8080</code></td><td>API base URL</td></tr>
+    <tr><td><code>clientId</code></td><td>(kosong)</td><td>Set sesuai <code>AUTH_CLIENT_ID</code></td></tr>
+    <tr><td><code>secret</code></td><td>(kosong)</td><td>Set sesuai <code>AUTH_SECRET</code></td></tr>
+    <tr><td><code>accessToken</code></td><td>(kosong)</td><td>Auto-populate oleh request "Get bearer token"</td></tr>
+  </tbody>
+</table>
+
+<h3>Workflow</h3>
+<ol>
+  <li>Set <code>baseUrl</code>, <code>clientId</code>, <code>secret</code>.</li>
+  <li>Jalankan <strong>Auth → Get bearer token</strong>. <code>accessToken</code> dari response auto-capture.</li>
+  <li>Jalankan request apapun di folder <strong>Authenticated</strong> — bearer auto-attach.</li>
+  <li>Untuk <strong>Multi-domain admin</strong>, aktifkan dulu <code>multiDomain.enabled=true</code> + <code>multiDomain.configurationApi=true</code> di server.</li>
+</ol>`
+    }
+  },
+  {
     id: 'troubleshooting',
     title: { en: 'Troubleshooting', id: 'Troubleshooting' },
     body: {

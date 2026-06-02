@@ -1,5 +1,6 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { config } from '../config/index.js'
+import { endpoints } from './collections.js'
 import { i18n, type Lang, sections } from './docs-content.js'
 
 const VERSION = '1.0.0'
@@ -225,22 +226,96 @@ function pickLang(query: unknown): Lang {
   return q === 'id' ? 'id' : 'en'
 }
 
+// Browser sends Accept: text/html,... → render HTML.
+// curl / Postman / Insomnia / Bruno / fetch defaults send Accept: any
+// or application/json → render JSON.
+function wantsHtml(req: FastifyRequest): boolean {
+  const accept = (req.headers.accept ?? '').toLowerCase()
+  if (accept.includes('application/json')) return false
+  return accept.includes('text/html')
+}
+
+function homeJson(): Record<string, unknown> {
+  return {
+    name: 'RyunaCDN',
+    version: VERSION,
+    author: AUTHOR,
+    tagline: 'Just-in-time image & asset CDN',
+    message:
+      'This is a JSON response because your client did not request text/html. Open this URL in a browser for the HTML landing page.',
+    links: {
+      home_html: '/',
+      docs_html: '/docs',
+      docs_html_id: '/docs?lang=id',
+      collections: {
+        postman: '/collections/postman',
+        insomnia: '/collections/insomnia',
+        bruno: '/collections/bruno'
+      },
+      robots: '/robots.txt'
+    },
+    source: 'https://github.com/aribrilliantsyah/ryunacdn',
+    license: 'GPL-3.0-or-later'
+  }
+}
+
+function docsJson(lang: Lang): Record<string, unknown> {
+  return {
+    name: 'RyunaCDN',
+    version: VERSION,
+    author: AUTHOR,
+    lang,
+    message:
+      'This is a JSON response because your client did not request text/html. Open this URL in a browser for the full HTML documentation.',
+    html_pages: {
+      en: '/docs',
+      id: '/docs?lang=id'
+    },
+    collections: {
+      postman: '/collections/postman',
+      insomnia: '/collections/insomnia',
+      bruno: '/collections/bruno'
+    },
+    sections: sections.map((s) => ({
+      id: s.id,
+      title: s.title[lang],
+      html_url: `/docs?lang=${lang}#${s.id}`
+    })),
+    endpoints: endpoints.map((e) => ({
+      folder: e.folder,
+      name: e.name,
+      method: e.method,
+      path: e.path,
+      auth: e.bearer ? 'bearer' : 'none',
+      description: e.description ?? null
+    }))
+  }
+}
+
 export function homeRoutes(app: FastifyInstance): void {
   void config
 
-  app.get('/', async (req, reply) =>
-    reply
-      .type('text/html; charset=utf-8')
-      .header('X-Robots-Tag', NO_INDEX)
-      .send(homePage(pickLang(req.query)))
-  )
+  app.get('/', async (req, reply) => {
+    reply.header('X-Robots-Tag', NO_INDEX)
+    if (wantsHtml(req)) {
+      return reply
+        .type('text/html; charset=utf-8')
+        .send(homePage(pickLang(req.query)))
+    }
+    return reply.type('application/json; charset=utf-8').send(homeJson())
+  })
 
-  app.get('/docs', async (req, reply) =>
-    reply
-      .type('text/html; charset=utf-8')
-      .header('X-Robots-Tag', NO_INDEX)
-      .send(docsPage(pickLang(req.query)))
-  )
+  app.get('/docs', async (req, reply) => {
+    reply.header('X-Robots-Tag', NO_INDEX)
+    if (wantsHtml(req)) {
+      return reply
+        .type('text/html; charset=utf-8')
+        .send(docsPage(pickLang(req.query)))
+    }
+    return reply
+      .type('application/json; charset=utf-8')
+      .send(docsJson(pickLang(req.query)))
+  })
 
   app.get('/robots.txt', async (_req, reply) =>
     reply
