@@ -18,6 +18,7 @@
 
 ---
 
+
 ## 🐾 What it does
 
 Image transforms on the fly, asset minify, multi-source storage, cache, multi-domain, recipes, routes, plugins, JWT auth, upload, PDF generation — everything DADI CDN did, **rewritten lean** in modern TypeScript.
