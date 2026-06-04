@@ -1,11 +1,12 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
+import type { MultipartFile, MultipartValue } from '@fastify/multipart'
 import { fileTypeFromBuffer } from 'file-type'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { config } from '../config/index.js'
 import { createLogger } from '../logger.js'
 const logger = createLogger('UploadRoute')
 import { safeJoin } from '../utils/path-safe.js'
+import { publicUrl } from '../utils/public-url.js'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif'])
 const IMAGE_MIMES = new Set([
@@ -20,25 +21,47 @@ function sanitiseFilename(name: string): string {
   return name.replace(/\s+/g, '-').replace(/[^a-z0-9._-]/gi, '').toLowerCase()
 }
 
-function publicUrl(req: { headers: { host?: string } }): string {
-  const publicHost = config.get<string>('publicUrl.host')
-  if (publicHost) {
-    const port = config.get<number>('publicUrl.port')
-    return `${config.get<string>('publicUrl.protocol')}://${publicHost}:${port}`
+interface CollectedUpload {
+  buf: Buffer
+  filename: string
+  customPath: string
+}
+
+async function collectUpload(req: FastifyRequest): Promise<CollectedUpload | null> {
+  let file: { buf: Buffer; filename: string } | null = null
+  let customPath = ''
+
+  for await (const part of req.parts()) {
+    if (part.type === 'file') {
+      const filePart = part as MultipartFile
+      if (file) {
+        await filePart.toBuffer().catch(() => undefined)
+        continue
+      }
+      const buf = await filePart.toBuffer()
+      file = { buf, filename: filePart.filename }
+    } else {
+      const fieldPart = part as MultipartValue
+      if (fieldPart.fieldname === 'path' && typeof fieldPart.value === 'string') {
+        customPath = fieldPart.value.trim()
+      }
+    }
   }
-  const protocol = config.get<string>('server.protocol')
-  const port = config.get<number>('server.port')
-  const host = req.headers.host?.split(':')[0] ?? '127.0.0.1'
-  return `${protocol}://${host}:${port}`
+
+  if (!file) return null
+  return { buf: file.buf, filename: file.filename, customPath }
 }
 
 export function uploadRoutes(app: FastifyInstance): void {
   app.post('/upload_image', async (req, reply) => {
-    const data = await req.file().catch(() => null)
+    const data = await collectUpload(req).catch((err) => {
+      logger.error({ err, module: 'upload' }, 'multipart parse failed')
+      return null
+    })
     if (!data) return reply.code(400).send({ status: false, message: 'No image part provided' })
 
-    const buf = await data.toBuffer()
-    const ext = path.extname(data.filename).slice(1).toLowerCase()
+    const { buf, filename: origName, customPath } = data
+    const ext = path.extname(origName).slice(1).toLowerCase()
     if (!IMAGE_EXTS.has(ext)) {
       return reply.code(400).send({ status: false, message: 'Only images are allowed.' })
     }
@@ -49,7 +72,6 @@ export function uploadRoutes(app: FastifyInstance): void {
         .send({ status: false, message: 'File content does not match an allowed image type.' })
     }
 
-    const customPath = ((data.fields.path as { value?: string } | undefined)?.value ?? '').trim()
     const baseDir = path.resolve('./storage/images')
     let destDir: string
     try {
@@ -58,7 +80,7 @@ export function uploadRoutes(app: FastifyInstance): void {
       return reply.code(400).send({ status: false, message: 'Invalid path.', debug: (err as Error).message })
     }
 
-    const filename = `${Date.now()}-${sanitiseFilename(data.filename)}`
+    const filename = `${Date.now()}-${sanitiseFilename(origName)}`
     const fullPath = path.join(destDir, filename)
 
     try {
@@ -79,11 +101,14 @@ export function uploadRoutes(app: FastifyInstance): void {
   })
 
   app.post('/upload_file', async (req, reply) => {
-    const data = await req.file().catch(() => null)
+    const data = await collectUpload(req).catch((err) => {
+      logger.error({ err, module: 'upload' }, 'multipart parse failed')
+      return null
+    })
     if (!data) return reply.code(400).send({ status: false, message: 'No file part provided' })
 
-    const buf = await data.toBuffer()
-    const ext = path.extname(data.filename).slice(1).toLowerCase()
+    const { buf, filename: origName, customPath } = data
+    const ext = path.extname(origName).slice(1).toLowerCase()
     if (IMAGE_EXTS.has(ext)) {
       return reply.code(400).send({
         status: false,
@@ -91,7 +116,6 @@ export function uploadRoutes(app: FastifyInstance): void {
       })
     }
 
-    const customPath = ((data.fields.path as { value?: string } | undefined)?.value ?? '').trim()
     const baseDir = path.resolve('./storage/assets')
     let destDir: string
     try {
@@ -100,7 +124,7 @@ export function uploadRoutes(app: FastifyInstance): void {
       return reply.code(400).send({ status: false, message: 'Invalid path.', debug: (err as Error).message })
     }
 
-    const filename = `${Date.now()}-${sanitiseFilename(data.filename)}`
+    const filename = `${Date.now()}-${sanitiseFilename(origName)}`
     const fullPath = path.join(destDir, filename)
 
     try {

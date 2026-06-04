@@ -2,9 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import puppeteer from 'puppeteer'
-import { config } from '../config/index.js'
 import { createLogger } from '../logger.js'
 const logger = createLogger('PdfRoute')
+import { publicUrl } from '../utils/public-url.js'
 
 interface PdfBody {
   url?: string
@@ -25,18 +25,6 @@ function isAllowedUrl(input: string): boolean {
 
 function sanitiseFilename(name: string): string {
   return name.replace(/\s+/g, '-').replace(/[^a-z0-9._-]/gi, '').toLowerCase()
-}
-
-function publicUrl(req: { headers: { host?: string } }): string {
-  const publicHost = config.get<string>('publicUrl.host')
-  if (publicHost) {
-    const port = config.get<number>('publicUrl.port')
-    return `${config.get<string>('publicUrl.protocol')}://${publicHost}:${port}`
-  }
-  const protocol = config.get<string>('server.protocol')
-  const port = config.get<number>('server.port')
-  const host = req.headers.host?.split(':')[0] ?? '127.0.0.1'
-  return `${protocol}://${host}:${port}`
 }
 
 export function pdfRoutes(app: FastifyInstance): void {
