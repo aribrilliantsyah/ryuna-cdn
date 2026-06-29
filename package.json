@@ -8,7 +8,7 @@
   "author": "aribrilliantsyah",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aribrilliantsyah/ryunacdn.git"
+    "url": "git+https://github.com/aribrilliantsyah/ryuna-cdn.git"
   },
   "engines": {
     "node": ">=22"

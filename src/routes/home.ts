@@ -254,7 +254,7 @@ function homeJson(): Record<string, unknown> {
       },
       robots: '/robots.txt'
     },
-    source: 'https://github.com/aribrilliantsyah/ryunacdn',
+    source: 'https://github.com/aribrilliantsyah/ryuna-cdn',
     license: 'GPL-3.0-or-later'
   }
 }

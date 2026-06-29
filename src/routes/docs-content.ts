@@ -117,7 +117,7 @@ git --version</code></pre>
     title: { en: 'Installation', id: 'Instalasi' },
     body: {
       en: `
-<pre><code>git clone https://github.com/aribrilliantsyah/ryunacdn.git
+<pre><code>git clone https://github.com/aribrilliantsyah/ryuna-cdn.git
 cd ryunacdn
 nvm use 22
 pnpm install</code></pre>
@@ -137,7 +137,7 @@ pnpm start</code></pre>
   <li><code>storage/images/</code>, <code>storage/assets/</code> — appear on first upload</li>
 </ul>`,
       id: `
-<pre><code>git clone https://github.com/aribrilliantsyah/ryunacdn.git
+<pre><code>git clone https://github.com/aribrilliantsyah/ryuna-cdn.git
 cd ryunacdn
 nvm use 22
 pnpm install</code></pre>
@@ -1243,9 +1243,9 @@ POST /api/routes    body: <route JSON></code></pre>`
     title: { en: 'License', id: 'Lisensi' },
     body: {
       en: `
-<p>GPL-3.0-or-later. See <a href="https://github.com/aribrilliantsyah/ryunacdn/blob/main/GPL.md">GPL.md</a>. Originally derived from DADI CDN © DADI+ Limited; modifications © 2026 aribrilliantsyah.</p>`,
+<p>GPL-3.0-or-later. See <a href="https://github.com/aribrilliantsyah/ryuna-cdn/blob/main/GPL.md">GPL.md</a>. Originally derived from DADI CDN © DADI+ Limited; modifications © 2026 aribrilliantsyah.</p>`,
       id: `
-<p>GPL-3.0-or-later. Lihat <a href="https://github.com/aribrilliantsyah/ryunacdn/blob/main/GPL.md">GPL.md</a>. Asal mula dari DADI CDN © DADI+ Limited; modifikasi © 2026 aribrilliantsyah.</p>`
+<p>GPL-3.0-or-later. Lihat <a href="https://github.com/aribrilliantsyah/ryuna-cdn/blob/main/GPL.md">GPL.md</a>. Asal mula dari DADI CDN © DADI+ Limited; modifikasi © 2026 aribrilliantsyah.</p>`
     }
   }
 ]
