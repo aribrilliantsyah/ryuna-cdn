@@ -118,7 +118,7 @@ git --version</code></pre>
     body: {
       en: `
 <pre><code>git clone https://github.com/aribrilliantsyah/ryuna-cdn.git
-cd ryunacdn
+cd ryuna-cdn
 nvm use 22
 pnpm install</code></pre>
 <p>Install pulls native modules (<code>sharp</code>, <code>puppeteer</code>) — first install may take 1–3 minutes.</p>
@@ -138,7 +138,7 @@ pnpm start</code></pre>
 </ul>`,
       id: `
 <pre><code>git clone https://github.com/aribrilliantsyah/ryuna-cdn.git
-cd ryunacdn
+cd ryuna-cdn
 nvm use 22
 pnpm install</code></pre>
 <p>Install bakal ngambil native module (<code>sharp</code>, <code>puppeteer</code>) — pertama kali biasanya 1–3 menit.</p>
